@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         TMDB Streaming Links with Enhanced UI
 // @namespace    http://tampermonkey.net/
-// @version      1.8
-// @description  Display streaming links on TMDB pages with modern UI, animations, and improved user experience
+// @version      1.9
+// @description  Display streaming links on TMDB pages with responsive design and improved user experience
 // @author       Your Name
 // @match        https://www.themoviedb.org/movie/*
 // @match        https://www.themoviedb.org/tv/*
@@ -22,50 +22,72 @@
         videasy: 'https://player.videasy.net'
     };
 
+    // Media query breakpoints
+    const MOBILE_BREAKPOINT = 768;
+
     const styles = {
         container: `
             position: fixed;
-            bottom: 30px;
-            right: 30px;
+            bottom: 20px;
+            right: 20px;
             background: linear-gradient(145deg, rgba(20, 20, 20, 0.95), rgba(30, 30, 30, 0.95));
-            padding: 20px;
-            border-radius: 15px;
+            padding: 15px;
+            border-radius: 12px;
             z-index: 1000;
             color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            min-width: 280px;
+            width: auto;
+            max-width: 90vw;
             transform: translateY(0);
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            transition: all 0.3s ease;
+        `,
+        mobileContainer: `
+            bottom: 10px;
+            right: 10px;
+            padding: 12px;
+            max-width: 95vw;
+            font-size: 14px;
         `,
         title: `
-            margin: 0 0 20px 0;
-            font-size: 20px;
+            margin: 0 0 15px 0;
+            font-size: 18px;
             font-weight: 600;
             color: #fff;
             border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        `,
+        mobileTitleText: `
+            font-size: 16px;
         `,
         inputContainer: `
             display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         `,
         inputGroup: `
             display: flex;
-            flex-direction: column;
-            gap: 5px;
+            align-items: center;
+            gap: 8px;
         `,
         label: `
             font-size: 14px;
             color: rgba(255, 255, 255, 0.7);
+            white-space: nowrap;
+        `,
+        mobileLabel: `
+            font-size: 12px;
         `,
         input: `
-            width: 70px;
-            padding: 8px;
-            border-radius: 8px;
+            width: 60px;
+            padding: 6px;
+            border-radius: 6px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
@@ -76,33 +98,46 @@
                 border-color: rgba(255, 255, 255, 0.5);
                 background: rgba(255, 255, 255, 0.15);
             }
-            &::-webkit-inner-spin-button {
-                opacity: 1;
-            }
+        `,
+        mobileInput: `
+            width: 50px;
+            padding: 4px;
+            font-size: 12px;
         `,
         linkContainer: `
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-radius: 6px;
             background: rgba(255, 255, 255, 0.05);
             transition: background 0.2s ease;
+            gap: 8px;
             &:hover {
                 background: rgba(255, 255, 255, 0.1);
             }
         `,
+        mobileLinkContainer: `
+            padding: 6px;
+            margin-bottom: 4px;
+        `,
         link: `
             color: #fff;
             text-decoration: none;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             flex-grow: 1;
             transition: color 0.2s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             &:hover {
                 color: #3498db;
             }
+        `,
+        mobileLink: `
+            font-size: 12px;
         `,
         copyButton: `
             background: rgba(255, 255, 255, 0.1);
@@ -110,15 +145,35 @@
             color: #fff;
             cursor: pointer;
             font-size: 14px;
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
             transition: all 0.2s ease;
+            flex-shrink: 0;
             &:hover {
                 background: rgba(255, 255, 255, 0.2);
             }
             &:active {
                 transform: scale(0.95);
             }
+        `,
+        mobileCopyButton: `
+            font-size: 12px;
+            padding: 3px 6px;
+        `,
+        toggleButton: `
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            padding: 0;
+            font-size: 18px;
+            transition: color 0.2s ease;
+            &:hover {
+                color: #fff;
+            }
+        `,
+        mobileToggleButton: `
+            font-size: 16px;
         `
     };
 
@@ -126,17 +181,28 @@
         mediaId: null,
         mediaType: null,
         season: 1,
-        episode: 1
+        episode: 1,
+        isMinimized: false,
+        isMobile: window.innerWidth <= MOBILE_BREAKPOINT
     };
 
-    function applyStyles(element, styleString) {
-        const styles = styleString.split(';').filter(style => style.trim());
-        styles.forEach(style => {
-            const [property, value] = style.split(':').map(s => s.trim());
-            if (property && value) {
-                element.style[property.replace(/-([a-z])/g, g => g[1].toUpperCase())] = value;
-            }
-        });
+    function applyStyles(element, styleString, mobileStyleString = '') {
+        const baseStyles = styleString.split(';').filter(style => style.trim());
+        const mobileStyles = mobileStyleString.split(';').filter(style => style.trim());
+
+        const applyStylePairs = (pairs) => {
+            pairs.forEach(style => {
+                const [property, value] = style.split(':').map(s => s.trim());
+                if (property && value) {
+                    element.style[property.replace(/-([a-z])/g, g => g[1].toUpperCase())] = value;
+                }
+            });
+        };
+
+        applyStylePairs(baseStyles);
+        if (state.isMobile && mobileStyleString) {
+            applyStylePairs(mobileStyles);
+        }
     }
 
     function getMediaInfo() {
@@ -150,12 +216,25 @@
 
     function createInputFields() {
         const container = document.createElement('div');
-        applyStyles(container, styles.container);
+        applyStyles(container, styles.container, styles.mobileContainer);
 
-        const title = document.createElement('h3');
-        title.textContent = '🎬 Streaming Links';
-        applyStyles(title, styles.title);
-        container.appendChild(title);
+        const titleBar = document.createElement('div');
+        applyStyles(titleBar, styles.title);
+
+        const titleText = document.createElement('span');
+        titleText.textContent = '🎬 Streaming Links';
+        applyStyles(titleText, '', styles.mobileTitleText);
+        titleBar.appendChild(titleText);
+
+        const toggleButton = document.createElement('button');
+        toggleButton.textContent = '−';
+        applyStyles(toggleButton, styles.toggleButton, styles.mobileToggleButton);
+        titleBar.appendChild(toggleButton);
+
+        container.appendChild(titleBar);
+
+        const contentContainer = document.createElement('div');
+        contentContainer.id = 'streamingContent';
 
         if (state.mediaType === 'tv') {
             const inputContainer = document.createElement('div');
@@ -167,7 +246,7 @@
 
                 const label = document.createElement('label');
                 label.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-                applyStyles(label, styles.label);
+                applyStyles(label, styles.label, styles.mobileLabel);
                 group.appendChild(label);
 
                 const input = document.createElement('input');
@@ -175,7 +254,7 @@
                 input.id = `${type}Input`;
                 input.value = state[type];
                 input.min = 1;
-                applyStyles(input, styles.input);
+                applyStyles(input, styles.input, styles.mobileInput);
 
                 input.addEventListener('change', () => {
                     state[type] = parseInt(input.value, 10);
@@ -186,24 +265,29 @@
                 inputContainer.appendChild(group);
             });
 
-            container.appendChild(inputContainer);
+            contentContainer.appendChild(inputContainer);
         }
 
         const linksContainer = document.createElement('div');
         linksContainer.id = 'streamingLinks';
-        container.appendChild(linksContainer);
+        contentContainer.appendChild(linksContainer);
 
+        container.appendChild(contentContainer);
         document.body.appendChild(container);
 
-        // Add minimize functionality
-        let isMinimized = false;
-        title.style.cursor = 'pointer';
-        title.addEventListener('click', () => {
-            isMinimized = !isMinimized;
-            linksContainer.style.display = isMinimized ? 'none' : 'block';
-            if (inputContainer) inputContainer.style.display = isMinimized ? 'none' : 'flex';
-            title.textContent = isMinimized ? '🎬 ▼' : '🎬 Streaming Links';
-            container.style.transform = isMinimized ? 'translateY(70%)' : 'translateY(0)';
+        // Toggle functionality
+        toggleButton.addEventListener('click', () => {
+            state.isMinimized = !state.isMinimized;
+            contentContainer.style.display = state.isMinimized ? 'none' : 'block';
+            toggleButton.textContent = state.isMinimized ? '+' : '−';
+            container.style.transform = state.isMinimized ? 'translateY(0)' : 'translateY(0)';
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            state.isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+            container.className = state.isMobile ? 'mobile' : '';
+            updateStreamingLinks(); // Refresh links with new styles
         });
     }
 
@@ -213,18 +297,18 @@
 
         Object.entries(sourceUrls).forEach(([source, url]) => {
             const linkContainer = document.createElement('div');
-            applyStyles(linkContainer, styles.linkContainer);
+            applyStyles(linkContainer, styles.linkContainer, styles.mobileLinkContainer);
 
             const link = document.createElement('a');
             link.href = buildUrl(url, state.mediaId, state.mediaType, state.season, state.episode);
             link.textContent = source === 'frembed' ? `${source} 🇫🇷` : source;
-            applyStyles(link, styles.link);
+            applyStyles(link, styles.link, styles.mobileLink);
             link.target = '_blank';
             linkContainer.appendChild(link);
 
             const copyButton = document.createElement('button');
             copyButton.textContent = '📋';
-            applyStyles(copyButton, styles.copyButton);
+            applyStyles(copyButton, styles.copyButton, styles.mobileCopyButton);
 
             copyButton.addEventListener('click', () => {
                 navigator.clipboard.writeText(link.href).then(() => {
@@ -253,7 +337,7 @@
                 return `${baseUrl}/film.php?id=${mediaId}`;
             }
         } else if (baseUrl.includes('videasy')) {
-            return mediaType === 'tv' 
+            return mediaType === 'tv'
                 ? `${baseUrl}/tv/${mediaId}/${season}/${episode}`
                 : `${baseUrl}/movie/${mediaId}`;
         }
