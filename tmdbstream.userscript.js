@@ -246,7 +246,13 @@
     }
 
     function buildUrl(baseUrl, mediaId, mediaType, season = 1, episode = 1) {
-        if (baseUrl.includes('videasy')) {
+        if (baseUrl.includes('frembed')) {
+            if (mediaType === 'tv') {
+                return `${baseUrl}/serie.php?id=${mediaId}&sa=${season}&epi=${episode}`;
+            } else {
+                return `${baseUrl}/film.php?id=${mediaId}`;
+            }
+        } else if (baseUrl.includes('videasy')) {
             return mediaType === 'tv' 
                 ? `${baseUrl}/tv/${mediaId}/${season}/${episode}`
                 : `${baseUrl}/movie/${mediaId}`;
