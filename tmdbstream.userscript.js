@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         TMDB Streaming Links with Clipboard Copy
+// @name         TMDB Streaming Links with Enhanced UI
 // @namespace    http://tampermonkey.net/
-// @version      1.5
-// @description  Display streaming links on TMDB pages with clipboard copy buttons
+// @version      1.8
+// @description  Display streaming links on TMDB pages with modern UI, animations, and improved user experience
 // @author       Your Name
 // @match        https://www.themoviedb.org/movie/*
 // @match        https://www.themoviedb.org/tv/*
@@ -19,7 +19,107 @@
         moviesapiclub: 'https://moviesapi.club',
         superembed: 'https://multiembed.mov/directstream.php?video_id=',
         frembed: 'https://frembed.live/api',
-        videasy: 'https://player.videasy.net' // New streaming source
+        videasy: 'https://player.videasy.net'
+    };
+
+    const styles = {
+        container: `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(145deg, rgba(20, 20, 20, 0.95), rgba(30, 30, 30, 0.95));
+            padding: 20px;
+            border-radius: 15px;
+            z-index: 1000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 280px;
+            transform: translateY(0);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        `,
+        title: `
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        `,
+        inputContainer: `
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        `,
+        inputGroup: `
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        `,
+        label: `
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        `,
+        input: `
+            width: 70px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            &:focus {
+                outline: none;
+                border-color: rgba(255, 255, 255, 0.5);
+                background: rgba(255, 255, 255, 0.15);
+            }
+            &::-webkit-inner-spin-button {
+                opacity: 1;
+            }
+        `,
+        linkContainer: `
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            transition: background 0.2s ease;
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+        `,
+        link: `
+            color: #fff;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            flex-grow: 1;
+            transition: color 0.2s ease;
+            &:hover {
+                color: #3498db;
+            }
+        `,
+        copyButton: `
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            &:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            &:active {
+                transform: scale(0.95);
+            }
+        `
     };
 
     let state = {
@@ -29,7 +129,16 @@
         episode: 1
     };
 
-    // Get media ID and type from URL
+    function applyStyles(element, styleString) {
+        const styles = styleString.split(';').filter(style => style.trim());
+        styles.forEach(style => {
+            const [property, value] = style.split(':').map(s => s.trim());
+            if (property && value) {
+                element.style[property.replace(/-([a-z])/g, g => g[1].toUpperCase())] = value;
+            }
+        });
+    }
+
     function getMediaInfo() {
         const path = window.location.pathname;
         const match = path.match(/\/(movie|tv)\/(\d+)/);
@@ -39,57 +148,45 @@
         }
     }
 
-    // Create input fields for season and episode
     function createInputFields() {
         const container = document.createElement('div');
-        container.style.position = 'fixed';
-        container.style.bottom = '20px';
-        container.style.right = '20px';
-        container.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        container.style.padding = '10px';
-        container.style.borderRadius = '5px';
-        container.style.zIndex = '1000';
-        container.style.color = '#fff';
+        applyStyles(container, styles.container);
 
         const title = document.createElement('h3');
-        title.textContent = 'Streaming Links';
-        title.style.margin = '0 0 10px 0';
+        title.textContent = '🎬 Streaming Links';
+        applyStyles(title, styles.title);
         container.appendChild(title);
 
         if (state.mediaType === 'tv') {
-            const seasonLabel = document.createElement('label');
-            seasonLabel.textContent = 'Season: ';
-            const seasonInput = document.createElement('input');
-            seasonInput.type = 'number';
-            seasonInput.id = 'seasonInput';
-            seasonInput.value = state.season;
-            seasonInput.min = 1;
-            seasonInput.style.width = '50px';
-            seasonInput.style.marginRight = '10px';
-            seasonLabel.appendChild(seasonInput);
-            container.appendChild(seasonLabel);
+            const inputContainer = document.createElement('div');
+            applyStyles(inputContainer, styles.inputContainer);
 
-            const episodeLabel = document.createElement('label');
-            episodeLabel.textContent = 'Episode: ';
-            const episodeInput = document.createElement('input');
-            episodeInput.type = 'number';
-            episodeInput.id = 'episodeInput';
-            episodeInput.value = state.episode;
-            episodeInput.min = 1;
-            episodeInput.style.width = '50px';
-            episodeLabel.appendChild(episodeInput);
-            container.appendChild(episodeLabel);
+            ['season', 'episode'].forEach(type => {
+                const group = document.createElement('div');
+                applyStyles(group, styles.inputGroup);
 
-            // Add event listeners for input changes
-            seasonInput.addEventListener('change', () => {
-                state.season = parseInt(seasonInput.value, 10);
-                updateStreamingLinks();
+                const label = document.createElement('label');
+                label.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                applyStyles(label, styles.label);
+                group.appendChild(label);
+
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.id = `${type}Input`;
+                input.value = state[type];
+                input.min = 1;
+                applyStyles(input, styles.input);
+
+                input.addEventListener('change', () => {
+                    state[type] = parseInt(input.value, 10);
+                    updateStreamingLinks();
+                });
+
+                group.appendChild(input);
+                inputContainer.appendChild(group);
             });
 
-            episodeInput.addEventListener('change', () => {
-                state.episode = parseInt(episodeInput.value, 10);
-                updateStreamingLinks();
-            });
+            container.appendChild(inputContainer);
         }
 
         const linksContainer = document.createElement('div');
@@ -97,35 +194,38 @@
         container.appendChild(linksContainer);
 
         document.body.appendChild(container);
+
+        // Add minimize functionality
+        let isMinimized = false;
+        title.style.cursor = 'pointer';
+        title.addEventListener('click', () => {
+            isMinimized = !isMinimized;
+            linksContainer.style.display = isMinimized ? 'none' : 'block';
+            if (inputContainer) inputContainer.style.display = isMinimized ? 'none' : 'flex';
+            title.textContent = isMinimized ? '🎬 ▼' : '🎬 Streaming Links';
+            container.style.transform = isMinimized ? 'translateY(70%)' : 'translateY(0)';
+        });
     }
 
-    // Update streaming links based on media type, season, and episode
     function updateStreamingLinks() {
         const linksContainer = document.getElementById('streamingLinks');
         linksContainer.innerHTML = '';
 
-        Object.keys(sourceUrls).forEach(source => {
+        Object.entries(sourceUrls).forEach(([source, url]) => {
             const linkContainer = document.createElement('div');
-            linkContainer.style.display = 'flex';
-            linkContainer.style.alignItems = 'center';
-            linkContainer.style.marginBottom = '5px';
+            applyStyles(linkContainer, styles.linkContainer);
 
             const link = document.createElement('a');
-            link.href = buildUrl(sourceUrls[source], state.mediaId, state.mediaType, state.season, state.episode);
-            link.textContent = source;
-            link.style.color = '#fff';
-            link.style.textDecoration = 'none';
-            link.style.marginRight = '10px';
+            link.href = buildUrl(url, state.mediaId, state.mediaType, state.season, state.episode);
+            link.textContent = source === 'frembed' ? `${source} 🇫🇷` : source;
+            applyStyles(link, styles.link);
             link.target = '_blank';
             linkContainer.appendChild(link);
 
             const copyButton = document.createElement('button');
             copyButton.textContent = '📋';
-            copyButton.style.background = 'none';
-            copyButton.style.border = 'none';
-            copyButton.style.color = '#fff';
-            copyButton.style.cursor = 'pointer';
-            copyButton.style.fontSize = '14px';
+            applyStyles(copyButton, styles.copyButton);
+
             copyButton.addEventListener('click', () => {
                 navigator.clipboard.writeText(link.href).then(() => {
                     copyButton.textContent = '✅';
@@ -145,22 +245,17 @@
         });
     }
 
-    // Build URL for streaming links
     function buildUrl(baseUrl, mediaId, mediaType, season = 1, episode = 1) {
         if (baseUrl.includes('videasy')) {
-            if (mediaType === 'tv') {
-                return `${baseUrl}/tv/${mediaId}/${season}/${episode}`;
-            } else {
-                return `${baseUrl}/movie/${mediaId}`;
-            }
-        } else if (mediaType === 'tv') {
-            return `${baseUrl}/tv/${mediaId}/${season}/${episode}`;
-        } else {
-            return `${baseUrl}/movie/${mediaId}`;
+            return mediaType === 'tv' 
+                ? `${baseUrl}/tv/${mediaId}/${season}/${episode}`
+                : `${baseUrl}/movie/${mediaId}`;
         }
+        return mediaType === 'tv'
+            ? `${baseUrl}/tv/${mediaId}/${season}/${episode}`
+            : `${baseUrl}/movie/${mediaId}`;
     }
 
-    // Initialize the script
     function init() {
         getMediaInfo();
         createInputFields();
