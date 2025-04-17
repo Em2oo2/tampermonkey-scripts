@@ -12,6 +12,10 @@
 (function() {
     'use strict';
 
+    if (window.self !== window.top) {
+        return;
+    }
+
     console.log('SEO Analyzer script starting...');
 
     const createFloatingBox = () => {
