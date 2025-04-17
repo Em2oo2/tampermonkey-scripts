@@ -5,36 +5,6 @@
 // @description  Displays and analyzes page title, meta description, and heading structure for SEO compliance
 // @author       Your name
 // @match        *://*/*
-// @exclude      *://*.openai.com/*
-// @exclude      *://*.chatgpt.com/*
-// @exclude      *://*.anthropic.com/*
-// @exclude      *://*.claude.ai/*
-// @exclude      *://*.gemini.google.com/*
-// @exclude      *://*.poe.com/*
-// @exclude      *://*.perplexity.ai/*
-// @exclude      *://*.deepseek.com/*
-// @exclude      *://*.facebook.com/*
-// @exclude      *://*.twitter.com/*
-// @exclude      *://*.x.com/*
-// @exclude      *://*.instagram.com/*
-// @exclude      *://*.linkedin.com/*
-// @exclude      *://*.tiktok.com/*
-// @exclude      *://*.pinterest.com/*
-// @exclude      *://*.reddit.com/*
-// @exclude      *://*.gmail.com/*
-// @exclude      *://*.mail.google.com/*
-// @exclude      *://*.outlook.com/*
-// @exclude      *://*.office.com/*
-// @exclude      *://*.notion.so/*
-// @exclude      *://*.slack.com/*
-// @exclude      *://*.youtube.com/*
-// @exclude      *://*.vimeo.com/*
-// @exclude      *://*.twitch.tv/*
-// @exclude      *://*.wikipedia.org/*
-// @exclude      *://*.amazon.com/*
-// @exclude      *://*.ebay.com/*
-// @exclude      *://*.github.com/*
-// @exclude      *://*.stackoverflow.com/*
 // @grant        none
 // @run-at       document-end
 // ==/UserScript==
