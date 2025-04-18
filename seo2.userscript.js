@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SEO Metadata Analyzer 2.1
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @description  Displays and analyzes page title, meta description, and heading structure for SEO compliance
 // @author       Your name
 // @match        *://*/*
@@ -54,6 +54,7 @@
         'notion.com',
         'notion.ai',
         'chat.openai.com',
+        'chatgpt.com',
         'openai.com',
         'claude.ai',
         'anthropic.com',
@@ -71,12 +72,17 @@
 
     // Check if current domain should be excluded
     const currentDomain = window.location.hostname;
+    const currentPath = window.location.pathname;
     const isExcluded = excludedDomains.some(domain => 
         currentDomain === domain || currentDomain.endsWith('.' + domain)
     );
 
-    if (isExcluded) {
-        console.log('SEO Analyzer: Skipping execution on excluded domain:', currentDomain);
+    // Check for WordPress admin (wp-admin) or PrestaShop admin (/admin)
+    const isWordPressAdmin = currentPath.includes('wp-admin');
+    const isPrestaShopAdmin = currentPath.includes('/admin');
+
+    if (isExcluded || isWordPressAdmin || isPrestaShopAdmin) {
+        console.log('SEO Analyzer: Skipping execution on excluded page:', currentDomain + currentPath);
         return;
     }
 
