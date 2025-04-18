@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SEO Metadata Analyzer 2
+// @name         SEO Metadata Analyzer 2.1
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.7
 // @description  Displays and analyzes page title, meta description, and heading structure for SEO compliance
 // @author       Your name
 // @match        *://*/*
@@ -12,7 +12,71 @@
 (function() {
     'use strict';
 
+    // Don't run in iframes
     if (window.self !== window.top) {
+        return;
+    }
+
+    // List of domains to exclude
+    const excludedDomains = [
+        'google.com', 
+        'google.fr', 
+        'google.de', 
+        'google.co.uk', 
+        'google.it', 
+        'google.es', 
+        'google.nl', 
+        'google.ca', 
+        'google.com.au', 
+        'google.com.br', 
+        'google.co.jp', 
+        'google.ru', 
+        'google.cn', 
+        'google.in', 
+        'google.ie', 
+        'google.se', 
+        'google.pl', 
+        'google.be', 
+        'gmail.com',
+        'docs.google.com',
+        'drive.google.com',
+        'sheets.google.com',
+        'slides.google.com',
+        'calendar.google.com',
+        'mail.google.com',
+        'meet.google.com',
+        'chat.google.com',
+        'classroom.google.com',
+        'aistudio.google.com',
+        'gemini.google.com',
+        'notion.so',
+        'notion.site',
+        'notion.com',
+        'notion.ai',
+        'chat.openai.com',
+        'openai.com',
+        'claude.ai',
+        'anthropic.com',
+        'mistral.ai',
+        'perplexity.ai',
+        'poe.com',
+        'deepseek.com',
+        'cohere.com',
+        'huggingface.co',
+        'phind.com',
+        'you.com',
+        'bard.google.com',
+        'duet.google.com'
+    ];
+
+    // Check if current domain should be excluded
+    const currentDomain = window.location.hostname;
+    const isExcluded = excludedDomains.some(domain => 
+        currentDomain === domain || currentDomain.endsWith('.' + domain)
+    );
+
+    if (isExcluded) {
+        console.log('SEO Analyzer: Skipping execution on excluded domain:', currentDomain);
         return;
     }
 
@@ -22,10 +86,18 @@
         console.log('Creating floating box...');
         const box = document.createElement('div');
         box.id = 'seo-analyzer-box';
+        
+        // Get saved position and collapsed state from localStorage
+        const savedData = JSON.parse(localStorage.getItem('seoAnalyzerData')) || {
+            position: { top: '20px', right: '20px', left: 'auto' },
+            isCollapsed: false
+        };
+        
         box.style.cssText = `
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: ${savedData.position.top};
+            right: ${savedData.position.right};
+            left: ${savedData.position.left};
             padding: 12px;
             background: #ffffff;
             border-radius: 12px;
@@ -39,8 +111,11 @@
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
             max-height: 80vh;
-            overflow-y: auto;
+            overflow: hidden;
         `;
+
+        // Store reference to the box
+        box.dataset.isCollapsed = savedData.isCollapsed;
         return box;
     };
 
@@ -382,6 +457,11 @@
         const descriptionLength = metaDescription.length;
 
         const box = createFloatingBox();
+        const contentDiv = document.createElement('div');
+        contentDiv.style.cssText = `
+            transition: all 0.3s ease;
+            overflow: hidden;
+        `;
 
         const header = document.createElement('div');
         header.style.cssText = `
@@ -393,16 +473,54 @@
             cursor: move;
             user-select: none;
             border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         `;
-        header.textContent = 'SEO Analysis';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = 'SEO Analysis';
+
+        const toggleButton = document.createElement('button');
+        toggleButton.style.cssText = `
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        `;
+        toggleButton.textContent = '−';
+        toggleButton.title = 'Collapse/Expand';
+
+        header.appendChild(titleSpan);
+        header.appendChild(toggleButton);
         box.appendChild(header);
 
-        box.appendChild(createSection('Title', title, titleLength, SEO_GUIDELINES.title));
-        box.appendChild(createSection('Meta Description', metaDescription, descriptionLength, SEO_GUIDELINES.description));
-        box.appendChild(createHeadingStructureSection(headingAnalysis));
+        // Create content sections
+        const titleSection = createSection('Title', title, titleLength, SEO_GUIDELINES.title);
+        const descSection = createSection('Meta Description', metaDescription, descriptionLength, SEO_GUIDELINES.description);
+        const headingSection = createHeadingStructureSection(headingAnalysis);
+
+        contentDiv.appendChild(titleSection);
+        contentDiv.appendChild(descSection);
+        contentDiv.appendChild(headingSection);
+        box.appendChild(contentDiv);
 
         document.body.appendChild(box);
         console.log('Box added to document body');
+
+        // Check if collapsed state should be applied
+        const isCollapsed = box.dataset.isCollapsed === 'true';
+        if (isCollapsed) {
+            contentDiv.style.maxHeight = '0';
+            contentDiv.style.margin = '0';
+            contentDiv.style.padding = '0';
+            contentDiv.style.opacity = '0';
+            toggleButton.textContent = '+';
+        }
 
         // Make box draggable
         let isDragging = false;
@@ -411,7 +529,22 @@
         let initialX;
         let initialY;
 
+        const saveData = () => {
+            const data = {
+                position: {
+                    top: box.style.top,
+                    left: box.style.left,
+                    right: box.style.right
+                },
+                isCollapsed: box.dataset.isCollapsed === 'true'
+            };
+            localStorage.setItem('seoAnalyzerData', JSON.stringify(data));
+        };
+
         header.addEventListener('mousedown', (e) => {
+            // Don't start dragging if clicking the toggle button
+            if (e.target === toggleButton) return;
+            
             isDragging = true;
             initialX = e.clientX - box.offsetLeft;
             initialY = e.clientY - box.offsetTop;
@@ -423,15 +556,50 @@
                 e.preventDefault();
                 currentX = e.clientX - initialX;
                 currentY = e.clientY - initialY;
+                
+                // Update box position
                 box.style.left = currentX + 'px';
                 box.style.top = currentY + 'px';
                 box.style.right = 'auto';
+                
+                // Save position while dragging for real-time updates
+                saveData();
             }
         });
 
         document.addEventListener('mouseup', () => {
-            isDragging = false;
-            header.style.cursor = 'move';
+            if (isDragging) {
+                isDragging = false;
+                header.style.cursor = 'move';
+                // Final save when dragging stops
+                saveData();
+            }
+        });
+
+        // Toggle collapse/expand
+        toggleButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isCollapsed = box.dataset.isCollapsed === 'true';
+            
+            if (isCollapsed) {
+                // Expand
+                contentDiv.style.maxHeight = '1000px';
+                contentDiv.style.margin = '';
+                contentDiv.style.padding = '';
+                contentDiv.style.opacity = '1';
+                toggleButton.textContent = '−';
+                box.dataset.isCollapsed = 'false';
+            } else {
+                // Collapse
+                contentDiv.style.maxHeight = '0';
+                contentDiv.style.margin = '0';
+                contentDiv.style.padding = '0';
+                contentDiv.style.opacity = '0';
+                toggleButton.textContent = '+';
+                box.dataset.isCollapsed = 'true';
+            }
+            
+            saveData();
         });
     };
 
