@@ -48,6 +48,7 @@
         'chat.google.com',
         'classroom.google.com',
         'aistudio.google.com',
+        'mail-edu.univ-fcomte.fr',
         'gemini.google.com',
         'notion.so',
         'notion.site',
