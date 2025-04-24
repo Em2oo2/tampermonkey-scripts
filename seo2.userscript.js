@@ -307,7 +307,8 @@
                 tag: heading.tagName,
                 level,
                 text,
-                isError
+                isError,
+                element: heading // Store reference to the actual DOM element
             });
 
             previousLevel = level;
@@ -383,7 +384,36 @@
                     border-left: 3px solid ${heading.isError ? '#EF4444' : '#10B981'};
                     font-family: monospace;
                     display: flex;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
                 `;
+
+                headingDiv.addEventListener('mouseover', () => {
+                    headingDiv.style.background = heading.isError ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255,255,255,0.2)';
+                });
+
+                headingDiv.addEventListener('mouseout', () => {
+                    headingDiv.style.background = heading.isError ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)';
+                });
+
+                headingDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (heading.element) {
+                        heading.element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                        
+                        // Highlight the heading temporarily
+                        const originalBackground = heading.element.style.backgroundColor;
+                        heading.element.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                        heading.element.style.transition = 'background-color 0.5s ease';
+                        
+                        setTimeout(() => {
+                            heading.element.style.backgroundColor = originalBackground || '';
+                        }, 2000);
+                    }
+                });
 
                 const tagSpan = document.createElement('span');
                 tagSpan.style.cssText = `
