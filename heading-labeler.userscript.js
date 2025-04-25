@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SEO Heading Labeler with Color Matching
+// @name         SEO Heading Labeler
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  Adds heading type labels (h1, h2, etc.) next to headings with matching colors
