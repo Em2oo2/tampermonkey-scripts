@@ -19,6 +19,8 @@
 
     // List of domains to exclude
     const excludedDomains = [
+        'proton.me',
+        'infomaniak.com',
         'google.com', 
         'google.fr', 
         'google.de', 
